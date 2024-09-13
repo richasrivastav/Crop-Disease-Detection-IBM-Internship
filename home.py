@@ -1,37 +1,47 @@
 import streamlit as st
 
+
+if 'username' not in st.session_state:
+    st.session_state.username = None  
+    st.session_state.user_type = None  
+    st.session_state.page = 'home' 
+    st.session_state.sidebar_visible = True  
+
 def app():
-    # st.set_page_config(page_title="Home - Sasyam", layout="wide")
-
-    # Custom CSS for styling
-    st.markdown("""
-        <style>
-            .stButton>button {
-                background-color: #95BF44;
-                color: white;
-                border-radius: 25px;
-                font-size: 18px;
-                padding: 12px;
-                width: 100%;
-                border: none;
-                margin: 10px;
-                transition: background-color 0.3s ease, transform 0.2s ease;
-                cursor: pointer;
-            }
-            .stButton>button:hover {
-                background-color: #4B5A31; /* Darker green on hover */
-                transform: scale(1.05);
-            }
-            .stButton>button:active {
-                background-color: #1e7e34; /* Even darker green on click */
-                transform: scale(0.95);
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
     st.title("Welcome to Sasyam")
 
-    # Introduction section
+    if st.session_state.username:
+        st.markdown(f"**Logged in as:** {st.session_state.username} ({st.session_state.user_type})")
+
+        if st.button('Logout', on_click=lambda: logout()):
+            pass
+
+    else:
+        st.subheader("Enter Your Details")
+        username = st.text_input("Enter your username")
+        user_type = st.radio(
+            "Which of the following best describes you?",
+            ("Crop Adviser", "Farmer", "Student", "Researcher")
+        )
+        if st.button("Proceed", on_click=lambda: proceed(username, user_type)):
+            pass
+        
+    col1, col2, col3 = st.columns([1,  1,  1])
+    
+    with col1:
+        st.image('img/a.png', width=250)
+        st.write(f"Instant Disease Detection")
+    # with col2:
+    #     st.markdown("### ➔") 
+    with col2:
+        st.image('img/b.png', width=250)
+        st.write('Helping Growing Tips')
+    # with col4:
+    #     st.markdown("### ➔")  
+    with col3:
+        st.image('img/c.png', width=250)
+        st.write('Supportive Farming Community')   
+    
     st.markdown("""
         ### How It Works
         Sasyam helps you detect crop diseases using advanced image processing techniques. 
@@ -41,13 +51,23 @@ def app():
         3. **Segment Image**: Click the **Segment Image** button to highlight areas of interest and disease on the leaf.
         4. **Get Diagnosis**: The system will analyze the image and provide a diagnosis along with recommendations for treatment.
     """)
+        
+            
+def proceed(username, user_type):
+    if username and user_type:
+        st.session_state.username = username
+        st.session_state.user_type = user_type
+        st.session_state.page = "Disease detection"
+        st.session_state.sidebar_visible = True
+    else:
+        st.warning("Please enter your username and select a description.")
 
-    # Start Demo button
-    # st.write("Ready to see it in action?")
-    # if st.button("Start Demo"):
-    #     st.session_state['show_demo'] = True
-    #     st.write("Redirecting to Disease Detection page for demo...")
-    #     st.session_state['page'] = 'Disease detection'
+    
 
-    # Redirect to appropriate page based on session state
-   
+
+
+def logout():
+    st.session_state.pop('username', None)
+    st.session_state.pop('user_type', None)
+    st.session_state.page = 'home'
+    st.session_state.sidebar_visible = False

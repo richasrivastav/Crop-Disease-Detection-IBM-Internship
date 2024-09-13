@@ -1,11 +1,10 @@
 import streamlit as st
-from PIL import Image, ImageEnhance
+from PIL import Image
 import numpy as np
 import tensorflow as tf
 import cv2
 
 def app():
-    # Custom CSS for styling
     st.markdown("""
         <style>
             .sidebar .sidebar-content {
@@ -44,16 +43,26 @@ def app():
             }
         </style>
     """, unsafe_allow_html=True)
+    
+    col1, col2, col3, col4, col5 = st.columns([1, 0.1, 1, 0.1, 1])
+    
+    with col1:
+        st.image('img/1.jpeg', width=200)
+    with col2:
+        st.markdown("### ➔")  
+    with col3:
+        st.image('img/2.jpeg', width=200)
+    with col4:
+        st.markdown("### ➔")  
+    with col5:
+        st.image('img/3.jpeg', width=200)
 
-    # Upload Image section
-    st.header("Upload Image for Disease Detection")
+    st.header("Upload an image of a rice disease-infected crop leaf for disease detection")
     uploaded_file = st.file_uploader("", type=["jpg", "jpeg", "png"])
-
+    
     if uploaded_file is not None:
-        # Load and display the uploaded image
-        uploaded_image = Image.open(uploaded_file)
-
-        # Initialize session state variables if not already present
+        uploaded_image = Image.open(uploaded_file).convert('RGB')
+        
         if 'original_image' not in st.session_state:
             st.session_state.original_image = uploaded_image
             st.session_state.current_image = uploaded_image
@@ -62,7 +71,6 @@ def app():
             st.session_state.enhanced_image = None
             st.session_state.segmented_image = None
 
-        # Display images based on the current state
         if st.session_state.show_enhanced and st.session_state.enhanced_image is not None:
             col1, col2 = st.columns(2)
             with col1:
@@ -75,50 +83,37 @@ def app():
                 st.image(st.session_state.original_image, caption="Original Image", use_column_width=True)
             with col2:
                 st.image(st.session_state.segmented_image, caption="Segmented Image", use_column_width=True)
-                st.write(f"Diseased Area: {st.session_state.diseased_area_cm2:.2f} cm²")
-                st.write(f"Disease Percentage: {st.session_state.disease_percentage:.2f}%")
         else:
             st.image(st.session_state.current_image, caption="Current Image", use_column_width=True)
 
-        # Automatically show disease detection after upload
         result_index = show_about_disease(uploaded_file)
-        class_name = [
-            'Bacterial Leaf Blight',
-            'Brown Spot',
-            'Healthy Rice Leaf',
-            'Leaf Blast',
-        ]
-
-        # Display disease detection results
+        class_name = ['Bacterial Leaf Blight', 'Brown Spot', 'Healthy Rice Leaf', 'Leaf Blast']
         st.markdown(f"### Detected Disease: {class_name[result_index]}")
         show_recommendations_and_treatment(result_index)
 
-        # Display remaining buttons horizontally with spacing
+        if result_index != 2:  
+            percentage_disease, volume_cm3 = calculate_disease_percentage_and_volume(st.session_state.original_image)
+            st.write(f"### Percentage of Leaf Area Affected by Disease: {percentage_disease:.2f}%")
+            st.write(f"### Estimated Volume of Disease Affected Area: {volume_cm3:.2f} cm³")
+            
+            if percentage_disease <= 20:
+                st.success(f"- **If infection is around 20%:** Continue with routine fungicide application. Ensure proper nutrient management and avoid excess watering.")
+            elif 20 < percentage_disease <= 50:
+                st.warning(f"- **If infection is around 20-50%:** Increase fungicide application frequency. Consider using a combination of treatments. Improve soil management and crop rotation practices.")
+            elif percentage_disease > 50:
+                st.error(f"- **If infection exceeds 50%:** Immediate intervention is required. Remove heavily infected plants and apply a stronger treatment. Seek advice from an agricultural expert and consider replanting if necessary.")
+        else:
+            st.write("### No affected area detected. The leaf appears to be healthy.")
+
         col1, col2, col3, col4 = st.columns(4)
-
         with col1:
-            if st.button("Enhance Image"):
-                st.session_state.enhanced_image = enhance_image(st.session_state.original_image)
-                st.session_state.show_enhanced = True
-                st.session_state.current_image = st.session_state.enhanced_image
-                st.session_state.show_segmented = False
-
+            st.button("Enhance Image", on_click=lambda: enhance_button_click())
         with col2:
-            if st.button("Segment Image"):
-                (st.session_state.segmented_image,
-                 st.session_state.disease_percentage,
-                 st.session_state.diseased_area_cm2) = segment_image(st.session_state.current_image)
-                st.session_state.show_segmented = True
-                st.session_state.show_enhanced = False
-
+            st.button("Segment Image", on_click=lambda: segment_button_click())
         with col3:
-            if st.button("Reset"):
-                reset_state()
-
+            st.button("Reset", on_click=lambda: reset_state())
         with col4:
-            if st.button("Exit"):
-                st.write("Exiting disease detection mode.")
-                st.stop()
+            st.button("Exit", on_click=lambda: exit_app())
 
 def show_about_disease(test_image):
     model = tf.keras.models.load_model('trained_model.keras')
@@ -186,85 +181,98 @@ def show_recommendations_and_treatment(disease_index):
             f"- **If infection is around 20%:** Monitor closely and apply fungicides as a preventive measure. Improve field sanitation and manage water levels.\n"
             f"- **If infection is around 50%:** Increase fungicide application frequency and consider additional treatments. Enhance field hygiene practices and adjust fertilization strategies.\n"
             f"- **If infection exceeds 70%:** Take immediate action. Remove severely infected plants and apply stronger fungicides. Consult with experts for advanced treatment options and consider replanting if necessary.\n\n"
-            "Leaf Blast can cause significant damage if not addressed promptly. Effective management involves both preventive and reactive measures."
-        ),
+            "Effective management of Leaf Blast involves timely intervention and strategic treatment to mitigate damage."
+        )
     }
-    
-    
-    if disease_index in recommendations:
-        disease_name, treatment = recommendations[disease_index]
-        st.write(f"### Recommended Treatment for {disease_name}:")
-        st.write(treatment)
-    else:
-        st.write("### No specific treatment is required for this condition.")
+    st.markdown(recommendations[disease_index][1])
+
+def enhance_button_click():
+    st.session_state.enhanced_image = enhance_image(st.session_state.original_image)
+    st.session_state.show_enhanced = True
+    st.session_state.current_image = st.session_state.enhanced_image
+    st.session_state.show_segmented = False
+
+def segment_button_click():
+    st.session_state.segmented_image, _ = segment_image(st.session_state.current_image)
+    st.session_state.show_segmented = True
+    st.session_state.show_enhanced = False
 
 def enhance_image(image):
     image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    
-    kernel = np.array([[0, -1, 0],
-                       [-1, 5, -1],
-                       [0, -1, 0]])
-    sharpened = cv2.filter2D(src=image_cv, ddepth=-1, kernel=kernel)
-    
-    pil_image = Image.fromarray(cv2.cvtColor(sharpened, cv2.COLOR_BGR2RGB))
-    
-    contrast_enhancer = ImageEnhance.Contrast(pil_image)
-    enhanced_image = contrast_enhancer.enhance(1.5)  
-    brightness_enhancer = ImageEnhance.Brightness(enhanced_image)
-    final_image = brightness_enhancer.enhance(1.2)  
-    
-    return final_image
+    image_cv = cv2.detailEnhance(image_cv, sigma_s=10, sigma_r=0.15)
+    enhanced_image = Image.fromarray(cv2.cvtColor(image_cv, cv2.COLOR_BGR2RGB))
+    return enhanced_image
 
-def segment_image(uploaded_image):
-    # Convert the uploaded image from RGB to BGR and resize
-    original_img = cv2.cvtColor(np.array(uploaded_image), cv2.COLOR_RGB2BGR)
-    # original_img = cv2.resize(original_img, (400, 400))
-    
-    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    sharpened_img = cv2.filter2D(src=original_img, ddepth=-1, kernel=kernel)
-    
-    pil_img = Image.fromarray(cv2.cvtColor(sharpened_img, cv2.COLOR_BGR2RGB))
-    contrast_enhancer = ImageEnhance.Contrast(pil_img)
-    enhanced_img = contrast_enhancer.enhance(1.5)
-    brightness_enhancer = ImageEnhance.Brightness(enhanced_img)
-    final_pil_img = brightness_enhancer.enhance(1.2)
-    final_img = cv2.cvtColor(np.array(final_pil_img), cv2.COLOR_RGB2BGR)
-    
-    hsv_img = cv2.cvtColor(final_img, cv2.COLOR_BGR2HSV)
+def segment_image(image):
+    image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    hsv_img = cv2.cvtColor(image_cv, cv2.COLOR_BGR2HSV)
+
     lower_bound = np.array([0, 0, 0])
     upper_bound = np.array([25, 255, 255])
-    mask = cv2.inRange(hsv_img, lower_bound, upper_bound)
-    result = cv2.bitwise_and(final_img, final_img, mask=mask)
     
-    result_rgb = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+    disease_mask = cv2.inRange(hsv_img, lower_bound, upper_bound)
 
-    gray_img = cv2.cvtColor(final_img, cv2.COLOR_BGR2GRAY)
-    _, leaf_mask = cv2.threshold(gray_img, 240, 255, cv2.THRESH_BINARY_INV)
-    
+    gray_img = cv2.cvtColor(image_cv, cv2.COLOR_BGR2GRAY)
+    _, leaf_mask = cv2.threshold(gray_img, 120, 255, cv2.THRESH_BINARY)
 
-    disease_mask = cv2.bitwise_and(mask, mask, mask=leaf_mask)
-    
-    leaf_area_pixels = cv2.countNonZero(leaf_mask)
-    diseased_area_pixels = cv2.countNonZero(disease_mask)
-    
-    disease_percentage = (diseased_area_pixels / leaf_area_pixels) * 100 if leaf_area_pixels != 0 else 0
-    
-    diseased_area_cm2 = diseased_area_pixels * 0.01
+    leaf_mask_inv = cv2.bitwise_not(leaf_mask)
+    holes_within_leaf = cv2.bitwise_and(leaf_mask_inv, leaf_mask_inv, mask=disease_mask)
 
+    contours, _ = cv2.findContours(holes_within_leaf, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+    output_img = image_cv.copy()
 
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > 50: 
+            cv2.drawContours(output_img, [contour], -1, (0, 0, 255), 5)
 
-    
-    
-    return Image.fromarray(result_rgb), disease_percentage, diseased_area_cm2
+    segmented_image = Image.fromarray(cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB))
+
+    return segmented_image, None
 
 def reset_state():
     st.session_state.clear()
-    st.session_state.show_enhanced = False
-    st.session_state.show_segmented = False
-    st.session_state.enhanced_image = None
-    st.session_state.segmented_image = None
-    
+
+def exit_app():
+    st.stop()
+
+def calculate_disease_percentage_and_volume(image):
+    image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    img = cv2.resize(image_cv, (500, 400))
+
+    hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    lb, lg, lr = 25, 0, 0
+    ub, ug, ur = 70, 255, 255
+
+    dlb, dlg, dlr = 0, 0, 0
+    dub, dug, dur = 25, 255, 255
+
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, leaf_mask = cv2.threshold(gray_img, 240, 255, cv2.THRESH_BINARY_INV)
+
+    disease_mask = cv2.inRange(hsv_img, np.array([dlb, dlg, dlr]), np.array([dub, dug, dur]))
+
+    disease_mask = cv2.bitwise_and(disease_mask, disease_mask, mask=leaf_mask)
+
+    total_leaf_area = cv2.countNonZero(leaf_mask)
+    affected_area = cv2.countNonZero(disease_mask)
+
+    reference_length_cm = 10 
+    reference_length_pixels = 100  
+
+    cm_per_pixel = reference_length_cm / reference_length_pixels
+
+    total_area_cm2 = total_leaf_area * (cm_per_pixel ** 2)
+    disease_area_cm2 = affected_area * (cm_per_pixel ** 2)
+
+    thickness_cm = 0.5 
+    volume_cm3 = disease_area_cm2 * thickness_cm
+
+    percentage_disease_in_leaf = (disease_area_cm2 / total_area_cm2) * 100 if total_area_cm2 > 0 else 0
+
+    return percentage_disease_in_leaf, volume_cm3
 
 if __name__ == "__main__":
     app()
