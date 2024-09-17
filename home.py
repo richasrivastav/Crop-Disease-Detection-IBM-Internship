@@ -1,6 +1,23 @@
 import streamlit as st
+import tensorflow as tf
+import os
 
+# Set environment variable to suppress oneDNN warnings
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
+# Ensure compatibility with TensorFlow warnings
+def reset_tensorflow_graph():
+    if tf.__version__.startswith('2.'):
+        # TensorFlow 2.x
+        tf.compat.v1.reset_default_graph()
+    else:
+        # TensorFlow 1.x
+        tf.reset_default_graph()
+
+# Call this function at the beginning of your app if you use TensorFlow
+reset_tensorflow_graph()
+
+# Initialize session state if not already set
 if 'username' not in st.session_state:
     st.session_state.username = None  
     st.session_state.user_type = None  
@@ -26,18 +43,14 @@ def app():
         if st.button("Proceed", on_click=lambda: proceed(username, user_type)):
             pass
         
-    col1, col2, col3 = st.columns([1,  1,  1])
+    col1, col2, col3 = st.columns([1, 1, 1])
     
     with col1:
         st.image('img/a.png', width=250)
         st.write(f"Instant Disease Detection")
-    # with col2:
-    #     st.markdown("### ➔") 
     with col2:
         st.image('img/b.png', width=250)
         st.write('Helping Growing Tips')
-    # with col4:
-    #     st.markdown("### ➔")  
     with col3:
         st.image('img/c.png', width=250)
         st.write('Supportive Farming Community')   
@@ -51,8 +64,7 @@ def app():
         3. **Segment Image**: Click the **Segment Image** button to highlight areas of interest and disease on the leaf.
         4. **Get Diagnosis**: The system will analyze the image and provide a diagnosis along with recommendations for treatment.
     """)
-        
-            
+
 def proceed(username, user_type):
     if username and user_type:
         st.session_state.username = username
@@ -62,12 +74,11 @@ def proceed(username, user_type):
     else:
         st.warning("Please enter your username and select a description.")
 
-    
-
-
-
 def logout():
     st.session_state.pop('username', None)
     st.session_state.pop('user_type', None)
     st.session_state.page = 'home'
     st.session_state.sidebar_visible = False
+
+if __name__ == "__main__":
+    app()

@@ -1,18 +1,22 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
-import home, diseased, about, contact, blogs
+import home
+import chat
+import diseased
+import about
+import contact
+import blogs
 
-# Initialize session state variables
 if 'username' not in st.session_state:
     st.session_state.username = None  
 if 'user_type' not in st.session_state:
     st.session_state.user_type = None  
 if 'page' not in st.session_state:
-    st.session_state.page = None
+    st.session_state.page = 'home'
 if 'selected_crop' not in st.session_state:
     st.session_state.selected_crop = None
 if 'sidebar_visible' not in st.session_state:
-    st.session_state.sidebar_visible = True
+    st.session_state.sidebar_visible = False
 
 st.set_page_config(page_title="Sasyam", page_icon=":seedling:")
 
@@ -73,31 +77,30 @@ footer {
 }
 
 #watson-chat {
-    position: relative;
+    position: absolute;
     right: 100px;
     bottom: 200px;
-    width: 300px;
+    width: 500px;
+    height:600px;
     z-index: 1000;
 }
 </style>
+
+
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 st.sidebar.image('img/log.png', width=150)
-
-st.sidebar.write("Welcome to Sasyam!", unsafe_allow_html=True)
+# st.sidebar.write("Welcome to Sasyam!", unsafe_allow_html=True)
 
 def show_sidebar():
-    if st.session_state.sidebar_visible:
+    if st.session_state.username:
         with st.sidebar:
-            if 'username' in st.session_state and st.session_state.username:
-                menu_title = f"{st.session_state.username}"
-            else:
-                menu_title = 'Sasyam'
+            menu_title = f"{st.session_state.username}"
             app = option_menu(
                 menu_title=menu_title,
-                options=['Home', 'Crop disease detection', 'Blogs', 'Contact us', 'About us'],
-                icons=['house-fill', 'activity', 'book-fill', 'envelope-fill', 'info-circle-fill'],
+                options=['Home', 'Crop disease detection', 'Blogs', 'Contact us', 'About us', 'Chat Community'],
+                icons=['house-fill', 'activity', 'book-fill', 'envelope-fill', 'info-circle-fill', 'chat-fill'],
                 menu_icon='chat-text-fill',
                 styles={
                     "container": {"padding": "5!important", "background-color": "#117864"},  
@@ -105,10 +108,12 @@ def show_sidebar():
                     "nav-link-selected": {"background-color": "#229954"}  
                 })
             return app
-    return None
+    else:
+        st.session_state.sidebar_visible = False
+        return None
 
 def run():
-    if 'sidebar_visible' in st.session_state and st.session_state.sidebar_visible:
+    if st.session_state.sidebar_visible and st.session_state.username:
         app = show_sidebar()
         if app == "Home":
             home.app()
@@ -120,14 +125,16 @@ def run():
             about.app()
         elif app == "Contact us":
             contact.app()
-        # elif app == "Community Chat":
-        #     community.app()
+        elif app == "Chat Community":
+            chat.app()
     else:
         home.app()
 
+# Call the run function
 run()
 
-st.components.v1.html("""
+Add Watson Chat component
+st.components.v1.html("""  
     <div id="watson-chat">
     <script>
       window.watsonAssistantChatOptions = {
@@ -143,4 +150,4 @@ st.components.v1.html("""
       });
     </script>
     </div>
-""", height=600)
+""", height=500)

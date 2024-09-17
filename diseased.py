@@ -41,21 +41,34 @@ def app():
                 background-color: #1e7e34; /* Even darker green on click */
                 transform: scale(0.95);
             }
+            .arrow1{
+            margin-top:50px;
+            position:relative;right:22px;
+            font-size:40px;
+            }
+
+            .arrow{
+            margin-top:50px;
+            font-size:40px}
         </style>
     """, unsafe_allow_html=True)
     
     col1, col2, col3, col4, col5 = st.columns([1, 0.1, 1, 0.1, 1])
     
+
+
+
+
     with col1:
-        st.image('img/1.jpeg', width=200)
+        st.image('img/1.png', width=200)
     with col2:
-        st.markdown("### ➔")  
+        st.markdown('<p class="arrow1">➔</p>',unsafe_allow_html=True)   
     with col3:
-        st.image('img/2.jpeg', width=200)
+        st.image('img/2.png', width=200)
     with col4:
-        st.markdown("### ➔")  
+        st.markdown('<p class="arrow">➔</p>',unsafe_allow_html=True)   
     with col5:
-        st.image('img/3.jpeg', width=200)
+        st.image('img/3.png', width=200)
 
     st.header("Upload an image of a rice disease-infected crop leaf for disease detection")
     uploaded_file = st.file_uploader("", type=["jpg", "jpeg", "png"])
@@ -235,8 +248,9 @@ def reset_state():
     st.session_state.clear()
 
 def exit_app():
-    st.stop()
-
+    st.session_state.page = 'home'
+    st.session_state.sidebar_visible = True
+   
 def calculate_disease_percentage_and_volume(image):
     image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     img = cv2.resize(image_cv, (500, 400))
