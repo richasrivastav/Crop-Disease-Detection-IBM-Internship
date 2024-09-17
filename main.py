@@ -130,10 +130,8 @@ def run():
     else:
         home.app()
 
-# Call the run function
 run()
 
-Add Watson Chat component
 st.components.v1.html("""  
     <div id="watson-chat">
     <script>
